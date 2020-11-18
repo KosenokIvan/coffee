@@ -3,18 +3,20 @@ import sqlite3
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTableWidgetItem, QHeaderView
 from PyQt5.QtCore import Qt
 from PyQt5 import uic
+from main_window import Ui_MainWindow
+from addEditCoffeeForm import Ui_MainWindow as CoffeeForm
 
 
-class CoffeeWindow(QMainWindow):
+class CoffeeWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
-        self.con = sqlite3.connect("coffee.sqlite")
+        self.con = sqlite3.connect("data/coffee.sqlite")
         self.cur = self.con.cursor()
         self.initUI()
         self.update_table()
 
     def initUI(self):
-        uic.loadUi("main.ui", self)
+        self.setupUi(self)
         self.add_coffee_action.triggered.connect(self.open_add_coffee_form)
         self.edit_coffee_action.triggered.connect(self.open_edit_coffee_form)
 
@@ -55,16 +57,16 @@ class CoffeeWindow(QMainWindow):
         self.con.close()
 
 
-class AddEditCoffeeForm(QMainWindow):
+class AddEditCoffeeForm(QMainWindow, CoffeeForm):
     def __init__(self, parent, coffee_id=None):
         super().__init__(parent)
         self.coffee_id = coffee_id
-        self.con = sqlite3.connect("coffee.sqlite")
+        self.con = sqlite3.connect("data/coffee.sqlite")
         self.cur = self.con.cursor()
         self.initUI()
 
     def initUI(self):
-        uic.loadUi("addEditCoffeeForm.ui", self)
+        self.setupUi(self)
         self.setWindowTitle("Добавить кофе" if self.coffee_id is None else "Изменить кофе")
         self.set_roast_degrees_list()
         self.set_coffee_info()
@@ -131,8 +133,10 @@ class AddEditCoffeeForm(QMainWindow):
         self.close()
 
     def check_originality_title(self, title):
-        return not bool(self.cur.execute("""SELECT * FROM coffee
-                    WHERE title = ? AND id != ?""", (title, self.coffee_id)).fetchall())
+        request = """SELECT * FROM coffee WHERE title = ?"""
+        if self.coffee_id is not None:
+            request += f""" AND id != {self.coffee_id}"""
+        return not self.cur.execute(request, (title,)).fetchall()
 
 
     def closeEvent(self, event):
